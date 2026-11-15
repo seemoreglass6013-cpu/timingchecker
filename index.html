@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimingCheck - iPhone最適化版</title>
+    <title>TimingCheck - 4音形対応版</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -143,7 +143,7 @@
         .volume-item label { font-size: 0.7rem; margin: 0; }
         .volume-item input { accent-color: #22c55e; }
 
-        /* 小節コンテナと6つのブロック（スマホ対応で2列×3行などに自動調整） */
+        /* 小節コンテナと6つのブロック */
         .bar-container {
             background: #0f172a;
             border: 1px solid var(--border);
@@ -184,12 +184,14 @@
             transform: translateY(-1px);
         }
         .t-block.is-4 { border-bottom: 3px solid #f59e0b; }
+        .t-block.is-2 { border-bottom: 3px solid #ec4899; }
         .t-block.is-1 { border-bottom: 3px solid #38bdf8; }
         .t-block.is-0 { border-bottom: 3px solid #64748b; opacity: 0.6; }
         
         .block-label { font-size: 0.55rem; color: var(--text-dim); margin-bottom: 1px; }
-        .block-sound { font-size: 0.75rem; font-weight: bold; margin-bottom: 1px; }
+        .block-sound { font-size: 0.7rem; font-weight: bold; margin-bottom: 1px; }
         .is-4 .block-sound { color: #fbbf24; }
+        .is-2 .block-sound { color: #f472b6; }
         .is-1 .block-sound { color: #7dd3fc; }
         .is-0 .block-sound { color: #94a3b8; }
         .block-dots { font-size: 0.6rem; color: var(--text); }
@@ -269,7 +271,8 @@
     let timerID = null;
 
     let numBars = 1;
-    let blocks = [4, 1, 4, 1, 4, 1]; // デフォルトは譜面[4C]1段目相当
+    // 4 = タタタタ, 2 = ターター, 1 = ターーー, 0 = ーーーー（休符）
+    let blocks = [4, 1, 4, 1, 4, 1];
 
     let volGuide = 0.7;
     let volTone = 0.8;
@@ -317,7 +320,11 @@
                 let cssClass = 'is-4';
                 let soundLabel = 'タタタタ';
                 let dots = '>';
-                if (val === 1) {
+                if (val === 2) {
+                    cssClass = 'is-2';
+                    soundLabel = 'ターター';
+                    dots = '• •';
+                } else if (val === 1) {
                     cssClass = 'is-1';
                     soundLabel = 'ターーー';
                     dots = '•';
@@ -336,7 +343,9 @@
                     <div class="block-dots">${dots}</div>
                 `;
                 div.onclick = () => {
-                    if (blocks[idx] === 4) blocks[idx] = 1;
+                    // タップごとに 4(タタタタ) → 2(ターター) → 1(ターーー) → 0(ーーーー) → 4 と循環
+                    if (blocks[idx] === 4) blocks[idx] = 2;
+                    else if (blocks[idx] === 2) blocks[idx] = 1;
                     else if (blocks[idx] === 1) blocks[idx] = 0;
                     else blocks[idx] = 4;
                     renderBars();
@@ -450,9 +459,18 @@
             }
 
             if (blockType === 4) {
+                // タタタタ (4打: 0, 1, 2, 3 ティックすべてで鳴らす)
                 triggerTone(subTick === 0 ? 'accent' : 'normal', time);
+            } else if (blockType === 2) {
+                // ターター (2打: 0, 2 ティック目で鳴らす)
+                if (subTick === 0 || subTick === 2) {
+                    triggerTone(subTick === 0 ? 'accent' : 'normal', time);
+                }
             } else if (blockType === 1) {
+                // ターーー (1打: 0 ティック目のみ)
                 if (subTick === 0) triggerTone('normal', time);
+            } else {
+                // ーーーー (休符: 鳴らさない)
             }
 
             nextTickTime += tickDuration;
